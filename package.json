@@ -6,22 +6,21 @@
   "scripts": {
     "start": "node ./src/app.js",
     "start-dev": "nodemon ./src/app.js",
-    "migrate": "node-pg-migrate"
+    "migrate": "node-pg-migrate",
+    "test": "jest"
   },
   "keywords": [],
   "author": "Kahfi Kurnia Aji",
   "license": "ISC",
   "devDependencies": {
-    "nodemon": "^2.0.20"
+    "jest": "^29.4.3"
   },
   "dependencies": {
     "bcrypt": "^5.1.0",
     "body-parser": "^1.20.1",
     "dotenv": "^16.0.3",
     "express": "^4.18.2",
-    "nanoid": "^4.0.1",
-    "node-pg-migrate": "^6.2.2",
-    "nodemon": "^2.0.20",
-    "pg": "^8.9.0"
+    "pg": "^8.9.0",
+    "uuid": "^9.0.0"
   }
 }

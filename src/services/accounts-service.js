@@ -18,9 +18,6 @@ const addAccounts = async ({ username, password }) => {
     }
     return result.rows[0];
   } catch (err) {
-    console.log("============================");
-    console.log(JSON.stringify(err));
-    console.log("============================");
     // return new ConflictError("Username telah digunakan");
   }
 };
@@ -34,7 +31,6 @@ const verifyNewUsername = async (username) => {
   const result = await pool.query(query);
 
   if (result.rowCount > 0) {
-    console.log("ERROR");
     throw new ConflictError(
       'Gagal menambahkan akun. Username sudah digunakan.',
     );
