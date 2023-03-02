@@ -3,22 +3,71 @@ const { v4: uuidv4 } = require("uuid");
 const ConflictError = require("../exceptions/conflict-error");
 const NotFoundError = require("../exceptions/not-found-error");
 const employeeRepository = require("../repository/employee-repository");
+const profileRepository = require("../repository/profile-repository");
 const accountRepository = require("../repository/account-repository");
+const roleRepository = require("../repository/role-repository");
+const imageRepository = require("../repository/image-repository");
+const jobRepository = require("../repository/job-repository");
 const errorResponse = require("../util/error-response");
 const successResponse = require("../util/success-response");
 const bcrypt = require("bcrypt");
 
 // Function untuk menambahkan data employee
 const addEmployee = async ({
+  imageUrl,
   name,
+  gender,
+  birthDate,
   phone,
   email,
-  gender,
+  address,
+  jobName,
+  roleName,
   username,
   password,
 }) => {
   // Melakukan try catch jika terjadi error
   try {
+    const messageError = [];
+
+    const imageId = imageRepository.selectImageIdByUrl({
+      url: imageUrl.trim(),
+    });
+
+    if (!imageId) {
+      messageError.push("Image tidak ditemukan");
+    }
+
+    const roleId = roleRepository.selectRoleIdByName({ name: roleName.trim() });
+
+    if (!roleId) {
+      messageError.push("Role tidak ditemukan");
+    }
+
+    const jobId = jobRepository.selectJobIdByName({ name: jobName.trim() });
+
+    if (!jobId) {
+      messageError.push("Jabatan tidak ditemukan");
+    }
+
+    const profileId = profileRepository.selectProfileIdByPhone({
+      phone: phone.trim(),
+    });
+
+    if (!profileId) {
+      messageError.push("No hp tidak ditemukan");
+    }
+
+    if (email) {
+      const emailId = profileRepository.selectProfileIdByEmail({
+        email: email.trim(),
+      });
+
+      if (!emailId) {
+        messageError.push("Email tidak ditemukan");
+      }
+    }
+
     // Jika phone dan email unique
     await dataIsUnique({ phone, email });
 
@@ -28,6 +77,16 @@ const addEmployee = async ({
     // Hash password
     const hashPassword = await bcrypt.hash(password, 10);
 
+    // Membuat variable employee yang berisikan seluruh data employees
+    const employee = await employeeRepository.insertEmployee({
+      id,
+      name,
+      gender,
+      phone,
+      email,
+      address,
+    });
+
     // Mambuat object account yang berisikan username
     const account = await accountRepository.insertAccount({
       id,
@@ -35,14 +94,8 @@ const addEmployee = async ({
       password: hashPassword,
     });
 
-    // Membuat variable employee yang berisikan seluruh data employees
-    const employee = await employeeRepository.insertEmployee({
-      id,
-      name,
-      phone,
-      email,
-      gender,
-    });
+    // Menghapus property password didalam object account
+    delete account.password;
 
     // Membuat object result
     const result = {
@@ -76,7 +129,7 @@ const getAllEmployees = async () => {
 
     const result = employee.map((value, index) => ({
       ...value,
-      ...account[index],
+      username: account[index].username,
     }));
 
     // Cek jika result tidak kosong
@@ -87,12 +140,12 @@ const getAllEmployees = async () => {
       // Jika result kosong
     } else {
       // Mereturn successResponse dengan status code 204 (No Content)
-      return successResponse(
-        204,
-        "No Content",
-        "Daftar karyawan kosong",
-        result
-      );
+      return successResponse({
+        code: 204,
+        status: "No Content",
+        message: "Daftar karyawan kosong",
+        data: result,
+      });
     }
 
     // Catch error
@@ -103,23 +156,17 @@ const getAllEmployees = async () => {
 };
 
 // Function untuk mengambil data employee berdasarkan id
-const getEmployeeByUsername = async ({username}) => {
+const getEmployeeById = async ({ id }) => {
   // Melakukan try catch jika terjadi error
   try {
-    // Membuat object id yang berisikan id employee yang dicari berdasarkan username
-    const id = await accountRepository.selectIdByUsername({username});
+    // Membuat object account yang berisikan id employee yang dicari berdasarkan id
+    const employee = await employeeRepository.selectEmployeeById({ id });
 
-    // Cek apakah id kosong
-    if (!id) {
-      // Throw NotFoundError jika id kosong atau tidak ditemukan
-      throw new NotFoundError("Data karyawan tidak ditemukan");
-    }
-
-    // Membuat variable employee yang berisikan data employee yang dicari berdasarkan id
-    const employee = await employeeRepository.selectEmployeeById(id);
+    // Membuat object account yang berisikan id employee yang dicari berdasarkan id
+    const account = await accountRepository.selectAccountById({ id });
 
     // Membuat variable result yang berisikan data employee yang dicari berdasarkan id
-    const result = { ...employee, username };
+    const result = { ...employee, username: account.username };
 
     // Cek jika result tidak kosong
     if (result) {
@@ -140,11 +187,17 @@ const getEmployeeByUsername = async ({username}) => {
 };
 
 // Function untuk update data employee
-const updateEmployeeByUsername = async ({username, name, phone, email, gender }) => {
+const updateEmployeeByUsername = async ({
+  username,
+  name,
+  phone,
+  email,
+  gender,
+}) => {
   // Melakukan try catch jika terjadi error
   try {
     // Membuat object id yang berisikan id employee yang dicari berdasarkan username
-    const id = await accountRepository.selectIdByUsername({username});
+    const id = await accountRepository.selectIdByUsername({ username });
 
     // Cek apakah id kosong
     if (!id) {
@@ -156,41 +209,44 @@ const updateEmployeeByUsername = async ({username, name, phone, email, gender })
     const oldData = await employeeRepository.selectEmployeeById(id);
     // Membuat variable newData yang berisikan data employee yang dicari berdasarkan id
     const newData = { name, phone, email, gender };
-    
+
     // Jika nilai properties pada newData kosong
     if (!newData.name) {
       newData.name = oldData.name;
     }
-    
+
     if (!newData.phone) {
       newData.phone = oldData.phone;
     }
-    
+
     if (!newData.email) {
       newData.email = oldData.email;
     }
-    
+
     if (!newData.gender) {
       newData.gender = oldData.gender;
     }
-    
+
     // Jika nilai phone dan email pada object oldData dan newData tidak sama
     if (oldData.phone !== newData.phone && oldData.email !== newData.email) {
       await dataIsUnique({ phone: newData.phone, email: newData.email });
     }
-    
+
     // Jika nilai phone pada object oldData dan newData tidak sama
     if (oldData.phone !== newData.phone) {
       await dataIsUnique({ phone: newData.phone });
     }
-    
+
     // Jika nilai email pada object oldData dan newData tidak sama
     if (oldData.email !== newData.email) {
       await dataIsUnique({ email: newData.email });
     }
 
     // Membuat variable result yang berisikan data employee yang diupdate berdasarkan id
-    const result = await employeeRepository.updateEmployeeById({...id, ...newData});
+    const result = await employeeRepository.updateEmployeeById({
+      ...id,
+      ...newData,
+    });
 
     // Mereturn successResponse jika result tidak kosong
     return successResponse({
@@ -206,11 +262,11 @@ const updateEmployeeByUsername = async ({username, name, phone, email, gender })
 };
 
 // Function untuk delete data employee
-const deleteEmployeeByUsername = async ({username}) => {
+const deleteEmployeeByUsername = async ({ username }) => {
   // Melakukan try catch jika terjadi error
   try {
     // Membuat object id yang berisikan id employee yang dicari berdasarkan username
-    const id = await accountRepository.selectIdByUsername({username});
+    const id = await accountRepository.selectIdByUsername({ username });
 
     // Cek apakah id kosong
     if (!id) {
@@ -240,6 +296,8 @@ const deleteEmployeeByUsername = async ({username}) => {
     return errorResponse(error);
   }
 };
+
+const findRoleIdByName = (name) => {};
 
 // Function untuk cek data unique
 const dataIsUnique = async ({ phone, email }) => {
@@ -286,7 +344,12 @@ const dataIsUnique = async ({ phone, email }) => {
 };
 
 // Export modules yang nanti akan dibutuhkan
-module.exports = { addEmployee, getAllEmployees, getEmployeeByUsername };
+module.exports = {
+  addEmployee,
+  getAllEmployees,
+  getEmployeeById,
+  updateEmployeeByUsername,
+};
 
 // TESTING
 // const main = async () => {
@@ -319,9 +382,12 @@ module.exports = { addEmployee, getAllEmployees, getEmployeeByUsername };
 // };
 
 // TESTING Update Employee By Username
-const main = async () => {
-  const result = await updateEmployeeByUsername({username: "puser1", phone:"085122223333"});
-  console.log(result);
-};
+// const main = async () => {
+//   const result = await updateEmployeeByUsername({
+//     username: "puser1",
+//     phone: "085122223333",
+//   });
+//   console.log(result);
+// };
 
-main();
+// main();
