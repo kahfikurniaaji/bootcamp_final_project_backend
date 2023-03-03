@@ -12,111 +12,159 @@ const errorResponse = require("../util/error-response");
 const successResponse = require("../util/success-response");
 const bcrypt = require("bcrypt");
 
-// Function untuk menambahkan data employee
 const addEmployee = async ({
-  imageUrl,
   name,
   gender,
-  birthDate,
+  birth_date,
   phone,
   email,
   address,
-  jobName,
-  roleName,
-  username,
-  password,
 }) => {
-  // Melakukan try catch jika terjadi error
-  try {
-    const messageError = [];
-
-    const imageId = imageRepository.selectImageIdByUrl({
-      url: imageUrl.trim(),
-    });
-
-    if (!imageId) {
-      messageError.push("Image tidak ditemukan");
-    }
-
-    const roleId = roleRepository.selectRoleIdByName({ name: roleName.trim() });
-
-    if (!roleId) {
-      messageError.push("Role tidak ditemukan");
-    }
-
-    const jobId = jobRepository.selectJobIdByName({ name: jobName.trim() });
-
-    if (!jobId) {
-      messageError.push("Jabatan tidak ditemukan");
-    }
-
-    const profileId = profileRepository.selectProfileIdByPhone({
-      phone: phone.trim(),
-    });
-
-    if (!profileId) {
-      messageError.push("No hp tidak ditemukan");
-    }
-
-    if (email) {
-      const emailId = profileRepository.selectProfileIdByEmail({
-        email: email.trim(),
-      });
-
-      if (!emailId) {
-        messageError.push("Email tidak ditemukan");
-      }
-    }
-
-    // Jika phone dan email unique
-    await dataIsUnique({ phone, email });
-
-    // Membuat variable id menggunakan nanoid
-    const id = uuidv4();
-
-    // Hash password
-    const hashPassword = await bcrypt.hash(password, 10);
-
-    // Membuat variable employee yang berisikan seluruh data employees
-    const employee = await employeeRepository.insertEmployee({
-      id,
-      name,
-      gender,
-      phone,
-      email,
-      address,
-    });
-
-    // Mambuat object account yang berisikan username
-    const account = await accountRepository.insertAccount({
-      id,
-      username,
-      password: hashPassword,
-    });
-
-    // Menghapus property password didalam object account
-    delete account.password;
-
-    // Membuat object result
-    const result = {
-      ...employee,
-      ...account,
-    };
-
-    // Mereturn successResponse dengan status code 201 (Created)
-    return successResponse({
-      code: 201,
-      status: "Created",
-      message: "Berhasil menambahkan karyawan",
-      data: result,
-    });
-
-    // Catch error
-  } catch (error) {
-    // Mereturn errorResponse
-    return errorResponse(error);
-  }
+  const id = await uuidv4();
+  const profile = await profileRepository.insertProfile({
+    id: id,
+    image_id: id,
+    name: name,
+    gender: gender,
+    birth_date: birth_date,
+    phone: phone,
+    email: email,
+    address: address,
+  });
+  return { code: 201, data: profile };
 };
+
+// Function untuk menambahkan data employee
+// const addEmployee = async ({
+//   image_url,
+//   name,
+//   gender,
+//   birth_date,
+//   phone,
+//   email,
+//   address,
+//   job_name,
+//   role_name,
+//   username,
+//   password,
+//   hire_date,
+// }) => {
+//   // Melakukan try catch jika terjadi error
+//   try {
+//     const messageError = [];
+
+//     // Cek ketersediaan job dan role
+//     await addEmployeeNotFoundErrorCheck({ job_name, role_name }, messageError);
+
+//     // Cek ketersediaan image_url, phone, email, username
+//     await addEmployeeConflictErrorCheck(
+//       { image_url, phone, email, username },
+//       messageError
+//     );
+
+//     const request = {
+//       image_url,
+//       name,
+//       gender,
+//       birth_date,
+//       phone,
+//       email,
+//       address,
+//       job_name,
+//       role_name,
+//       username,
+//       password,
+//       hire_date,
+//     };
+
+//     // Membuat variable id
+//     const id = uuidv4();
+
+//     // Membuat variable employeeId
+//     const employeeId = `employee-${id}`;
+
+//     // Mengupload images (SKIP) =============================
+//     // Membuat variable imageId
+//     const imageId = `image-${id}`;
+
+//     // Membuat object image
+//     const image = { id: imageId, url: image_url };
+
+//     // Insert image_url kedalam database
+//     const resultImage = await imageRepository.insertImage(image);
+
+//     // Membuat object profile
+//     const profile = {
+//       id: employeeId,
+//       image_id: imageId,
+//       name: name,
+//       gender: gender,
+//       birth_date: birth_date,
+//       phone: phone,
+//       email: email,
+//       address: address,
+//     };
+
+//     // Insert profile kedalam database
+//     const resultProfile = await profileRepository.insertProfile(profile);
+
+//     // Membuat variabel roleId
+//     const roleId = await roleRepository.selectRoleIdByName({ name: role_name });
+
+//     // Hashing password
+//     const hashPassword = await bcrypt.hash(password, 10);
+
+//     // Membuat object account
+//     const account = {
+//       id: employeeId,
+//       role_id: roleId.id,
+//       username: username,
+//       password: hashPassword,
+//     };
+
+//     // Insert account kedalam database
+//     const resultAccount = await accountRepository.insertAccount(account);
+
+//     // Membuat object jobId
+//     const jobId = await jobRepository.selectJobIdByName({ name: job_name });
+
+//     // Membuat variable employee yang berisikan seluruh data employees
+//     const employee = {
+//       id: employeeId,
+//       job_id: jobId.id,
+//       hire_date: hire_date,
+//     };
+
+//     // Insert employee
+//     const resultEmployee = await employeeRepository.insertEmployee(employee);
+
+//     // Membuat object result
+//     const result = {
+//       id: resultEmployee.id,
+//       image_url: resultImage.url,
+//       username: resultAccount.username,
+//       name: resultProfile.name,
+//       gender: resultProfile.gender,
+//       birth_date: resultProfile.birth_date,
+//       phone: resultProfile.phone,
+//       email: resultProfile.email,
+//       address: resultProfile.address,
+//       job_name: job_name,
+//       hire_date: resultEmployee.hire_date,
+//     };
+
+//     // Mereturn successResponse dengan status code 201 (Created)
+//     return successResponse({
+//       message: "Berhasil menambahkan karyawan",
+//       data: result,
+//     });
+
+//     // Catch error
+//   } catch (error) {
+//     // Mereturn errorResponse
+//     return errorResponse(error);
+//   }
+// };
 
 // Function untuk mengambil seluruh data employees
 const getAllEmployees = async () => {
@@ -343,6 +391,129 @@ const dataIsUnique = async ({ phone, email }) => {
   }
 };
 
+// Function untuk mengecek image
+const addImageCheck = async (image_url, messages) => {
+  // Membuat objeck imageId
+  const imageIsExist = await imageRepository.selectImageIdByUrl({
+    url: image_url.trim(),
+  });
+
+  // Jika image tidak tersedia
+  if (imageIsExist) {
+    // Push message error
+    messages.push("Foto telah digunakan");
+  }
+};
+
+// Function untuk mengecek profile (phone dan email)
+const addProfileCheck = async ({ phone, email }, messages) => {
+  // Membuat object phoneIsExist
+  const phoneIsExist = await profileRepository.selectProfileIdByPhone({
+    phone: phone.trim(),
+  });
+
+  // Jika phone telah digunakan
+  if (phoneIsExist) {
+    // Push messages error
+    messages.push("No hp telah digunakan");
+  }
+
+  // Jika email tidak kosong
+  if (email) {
+    // Membuat object emailIsExist
+    const emailIsExist = await profileRepository.selectProfileIdByEmail({
+      email: email.trim(),
+    });
+
+    // Jika phone telah digunakan
+    if (emailIsExist) {
+      // Push messages error
+      messages.push("Email telah digunakan");
+    }
+  }
+};
+
+// Function untuk mengecek job
+const addJobCheck = async (job_name, messages) => {
+  // Membuat object jobIsExist
+  const jobIsExist = await jobRepository.selectJobIdByName({
+    name: job_name.trim(),
+  });
+
+  // Jika job name tidak ditemukan
+  if (!jobIsExist) {
+    // Push messages error
+    messages.push("Jabatan tidak ditemukan");
+  }
+};
+
+// Function untuk mengecek role
+const addRoleCheck = async (role_name, messages) => {
+  // Membuat object roleIsExist
+  const roleIsExist = await roleRepository.selectRoleIdByName({
+    name: role_name.trim(),
+  });
+
+  // Jika role name tidak ditemukan
+  if (!roleIsExist) {
+    // Push messages error
+    messages.push("Role tidak ditemukan");
+  }
+};
+
+// Function untuk mengecek account
+const addAccountCheck = async (username, messages) => {
+  // Membuat object usernameIsExist
+  const usernameIsExist = await accountRepository.selectAccountIdByUsername({
+    username: username.trim(),
+  });
+
+  // Jika role name tidak ditemukan
+  if (!usernameIsExist) {
+    // Push messages error
+    messages.push("Username telah digunakan");
+  }
+};
+
+// Function untuk mengecek ketersediaan image, job, dan role
+const addEmployeeNotFoundErrorCheck = async (
+  { job_name, role_name },
+  messages
+) => {
+  // Cek ketersediaan job pada saat add employee
+  await addJobCheck(job_name, messages);
+
+  // Cek ketersediaan role pada saat add employee
+  await addRoleCheck(role_name, messages);
+
+  // Check apakah ada messages error
+  if (messages.length > 0) {
+    // Throw NotFoundError jika messages error tidak kosong
+    throw new NotFoundError(messages);
+  }
+};
+
+// Function untuk mengecek ketersediaan image, job, dan role
+const addEmployeeConflictErrorCheck = async (
+  { image_url, phone, email, username },
+  messages
+) => {
+  // Image check pada saat add employee
+  await addImageCheck(image_url, messages);
+
+  // Phone dan email check pada saat add employee
+  await addAccountCheck({ phone, email }, messages);
+
+  // Username check pada saat add employee
+  await addAccountCheck(username, messages);
+
+  // Check apakah ada messages error
+  if (messages.length > 0) {
+    // Throw ConflictError jika messages error tidak kosong
+    throw new ConflictError(messageError);
+  }
+};
+
 // Export modules yang nanti akan dibutuhkan
 module.exports = {
   addEmployee,
@@ -350,44 +521,3 @@ module.exports = {
   getEmployeeById,
   updateEmployeeByUsername,
 };
-
-// TESTING
-// const main = async () => {
-//   const result = await getAllEmployees();
-//   // const result = await dataIsUnique({
-//   //   phone: "085700001110",
-//   //   email: "email1@email.com",
-//   // });
-//   // const result = await getEmployeeById("1");
-//   // const result = await addEmployee({
-//   //   name: "puser1",
-//   //   phone: "085722229000",
-//   //   email: "puser1@mail.com",
-//   //   gender: "MALE",
-//   //   username: "puser1",
-//   //   password: "password",
-//   // });
-//   // const result = await deleteEmployeeById("1");
-//   // const result = await updateEmployeeById(2, {
-//   //   phone: "085721476788",
-//   //   email: "kahfi@gmail.com",
-//   // });
-//   console.log(result);
-// };
-
-// TESTING Get Employee By Username
-// const main = async () => {
-//   const result = await getEmployeeByUsername("apuser1");
-//   console.log(result);
-// };
-
-// TESTING Update Employee By Username
-// const main = async () => {
-//   const result = await updateEmployeeByUsername({
-//     username: "puser1",
-//     phone: "085122223333",
-//   });
-//   console.log(result);
-// };
-
-// main();

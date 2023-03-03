@@ -1,7 +1,5 @@
-const successResponse = ({code = 200, status = "OK", message = "success", data}) => {
+const successResponse = ({ message = "success", data }) => {
   return {
-    code: code,
-    status: status,
     message: message,
     data: data,
   };

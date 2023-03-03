@@ -76,7 +76,7 @@ const deleteAccountById = async ({ id }) => {
 };
 
 // Function untuk SELECT data account berdasarkan username
-const selectIdByUsername = async ({ username }) => {
+const selectAccountIdByUsername = async ({ username }) => {
   // Query SELECT data account didalam database berdasarkan username
   const query = {
     text: "SELECT id FROM accounts WHERE username = $1",
@@ -111,4 +111,5 @@ module.exports = {
   selectAccountById,
   updateAccountById,
   deleteAccountById,
+  selectAccountIdByUsername
 };
